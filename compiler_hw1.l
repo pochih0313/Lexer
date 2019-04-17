@@ -17,10 +17,39 @@ id {letter}+({letter}|{digit})*
 int {digit}+
 float ({digit}*\.{digit}+)
 whitespace [ \t]+
-%x STR CMT
+%x STR
+%x CMT
 
 /* Rules section */
 %%
+
+"\""		{ BEGIN(STR);
+				printf("%s \t QUOTA\n", yytext);
+			}
+<STR>"\""	{ BEGIN(INITIAL);
+				printf("%s \t QUOTA\n", yytext);
+			}
+<STR>(\\.|[^\\\"])*	{ printf("%s \t STR_CONST\n", yytext); }
+
+"/*"		{ BEGIN(CMT);
+				if (line_num != comment_line) {
+					comment_num++;
+				}
+				printf("%s", yytext); 
+			}
+<CMT>"*/"	{ BEGIN(INITIAL);
+				comment_line = line_num;
+				printf("%s \t C Comment\n", yytext); 
+			}
+<CMT>\n	 	{ printf("%s", yytext); 
+				comment_num++;
+				line_num++;
+			}
+<CMT>.		{ printf("%s", yytext); }
+
+"//".*		{ comment_num++;
+				printf("%s \t C++ Comment\n", yytext);
+			}
 
 "+" 	{ printf("%s \t ADD\n", yytext); }
 "-"		{ printf("%s \t SUB\n", yytext); }
@@ -71,36 +100,8 @@ whitespace [ \t]+
 {float}		{ printf("%s \t F_CONST\n", yytext); }
 {id}		{ printf("%s \t ID\n", yytext); }
 {whitespace}	{;}
-.			{;}
 \n			{line_num++;}
-
-"\""		{ BEGIN(STR);
-				printf("%s \t QUOTA\n", yytext);
-			}
-<STR>"\""	{ BEGIN(INITIAL);
-				printf("%s \t QUOTA\n", yytext);
-			}
-<STR>[^\"]*	{ printf("%s \t STR_CONST\n", yytext); }
-
-"/*"		{ BEGIN(CMT);
-				if (line_num != comment_line) {
-					comment_num++;
-				}
-				printf("%s\n", yytext); 
-			}
-<CMT>"*/"	{ BEGIN(INITIAL);
-				comment_line = line_num;
-				printf("%s \t C Comment\n", yytext); 
-			}
-<CMT>\n	 	{ printf("%s\n", yytext); 
-				comment_num++;
-				line_num++;
-			}
-<CMT>.		{ printf("%s", yytext); }
-
-"//".*		{ comment_num++;
-				printf("%s \t C++ Comment\n", yytext);
-			}
+.	{;}
 
 %%
 
